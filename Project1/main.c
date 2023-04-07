@@ -43,7 +43,7 @@ int insert(sqlite3* db)
     scanf("%s", plugin_name);
     getchar();
 
-    sprintf(sql, "insert into person values('%s', '%s', '%s');", username, *password, *plugin_name);
+    sprintf(sql, "insert into person values('%s', '%s', '%s');", username, password, plugin_name);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
