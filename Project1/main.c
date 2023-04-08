@@ -9,6 +9,8 @@
 #pragma comment(lib, "sqlite3.lib")
 #define DEBUG 1
 
+int count = 0;
+
 int my_strtok(char* dest, const char* src, char delimeter)
 {
     assert(dest && src);
@@ -25,9 +27,9 @@ int my_strtok(char* dest, const char* src, char delimeter)
 
 int insert(sqlite3* db)
 {
-    char* username;
-    char* password;
-    char* plugin_name;
+    char username[256] = { 0 };
+    char password[256] = { 0 };
+    char plugin_name[256] = { 0 };
     char* errmsg;
     char sql[256];
 
@@ -43,7 +45,7 @@ int insert(sqlite3* db)
     scanf("%s", plugin_name);
     getchar();
 
-    sprintf(sql, "insert into person values('%s', '%s', '%s');", username, password, plugin_name);
+    sprintf(sql, "insert into person values(%d, '%s', '%s', '%s');", count + 1, username, password, plugin_name);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
@@ -53,21 +55,28 @@ int insert(sqlite3* db)
     else
     {
         printf("Insert done.\n");
+        count++;
     }
     return 0;
 }
 
 int delete(sqlite3* db)
 {
-    char* username;
-    char* errmsg;
+    int id = -1;
     char sql[256];
+    char* errmsg;
 
-    printf("Input username:>");
-    scanf("%s", username);
+    printf("Input id:>");
+    scanf("%d", &id);
     getchar();
 
-    sprintf(sql, "delete from person where username=%s", username);
+    if (id < 0)
+    {
+        printf("ID invalid!\n");
+        return 1;
+    }
+
+    sprintf(sql, "delete from person where rowid = %d", id);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
@@ -77,15 +86,16 @@ int delete(sqlite3* db)
     else
     {
         printf("Delete done.\n");
+        count--;
     }
     return 0;
 }
 
 int update(sqlite3* db)
 {
-    char* username;
-    char* password;
-    char* plugin_name;
+    char username[256] = { 0 };
+    char password[256] = { 0 };
+    char plugin_name[256] = { 0 };
     char* errmsg;
     char sql[256];
 
@@ -125,13 +135,44 @@ int update(sqlite3* db)
     return 0;
 }
 
+static int callback(void* data, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc; i++) 
+    {
+        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    }
+    printf("\n");
+    return 0;
+}
 
+int query(sqlite3* db)
+{
+    char sql[256] = { 0 };
+    char* errmsg;
+
+    sprintf(sql, "select * from person;");
+
+    if (sqlite3_exec(db, sql, callback, NULL, &errmsg) != SQLITE_OK)
+    {
+        fprintf(stderr, "query error:%s\n", errmsg);
+        return 1;
+    }
+    else
+    {
+        printf("query done.\n");
+        if (sqlite3_exec(db, "VACUUM", NULL, NULL, &errmsg) != SQLITE_OK)
+        {
+            fprintf(stderr, "vacuum error:%s\n", errmsg);
+        }
+    }
+    return 0;
+}
 
 int main()
 {
     char* sendBuf = (char *) malloc(256);
     char* receiveBuf = "awa\0a23456\0awaawa";
-
+    
 #ifndef DEBUG
     int sendLength = 0;
     int receiveLength = 0;
@@ -182,9 +223,9 @@ int main()
 
 #endif
     
-    char* username = (char *) calloc(1, 256);
-    char* password = (char *) calloc(1, 256);
-    char* plugin_name = (char *) calloc(1, 256);
+    char username[256] = { 0 };
+    char password[256] = { 0 };
+    char plugin_name[256] = { 0 };
 
     int lenU = my_strtok(username, receiveBuf, '\0');
     int lenPw = my_strtok(password, receiveBuf + lenU + 1, '\0');
@@ -211,7 +252,7 @@ int main()
         printf("Opened database successfully.\n");
     }
 
-    if (sqlite3_exec(db, "create table if not exist person(username char, password char, plugin_name char)", NULL, NULL, errMsg) != SQLITE_OK)
+    if (sqlite3_exec(db, "create table if not exists person(ID Integer, username char, password char, plugin_name char)", NULL, NULL, &errMsg) != SQLITE_OK)
     {
         fprintf(stderr, "create table error:%s\n", sqlite3_errmsg(db));
         return 1;
@@ -221,9 +262,46 @@ int main()
         printf("create or open table success.\n");
     }
 
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM person", -1, &stmt, NULL);
+    sqlite3_step(stmt);
+    count = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    
+    while (1)
+    {
+        printf("Input cmd;\n");
+        printf("**********************\n");
+        printf("1:insert  2:delete  3:query  4:updata  5:quit\n");
+        printf("**********************\n");
 
+        int cmd = 0;
 
-    sqlite3_close(db);
+        scanf("%d", &cmd);
+        getchar();
+        switch (cmd)
+        {
+        case 1:
+            insert(db);
+            break;
+        case 2:
+            delete(db);
+            break;
+        case 3:
+            query(db);
+            break;
+        case 4:
+            update(db);
+            break;
+        case 5:
+            sqlite3_close(db);
+            exit(0);
+
+        default:
+            printf("Erro cmd\n");
+            break;
+        }
+    }
 
 #ifndef DEBUG
 
