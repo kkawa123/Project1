@@ -93,15 +93,21 @@ int delete(sqlite3* db)
 
 int update(sqlite3* db)
 {
-    char username[256] = { 0 };
+    int id = -1;
     char password[256] = { 0 };
     char plugin_name[256] = { 0 };
     char* errmsg;
     char sql[256];
 
-    printf("Input username:>");
-    scanf("%s", username);
+    printf("Input id:>");
+    scanf("%d", &id);
     getchar();
+
+    if (id < 0)
+    {
+        printf("ID invalid!\n");
+        return 1;
+    }
 
     printf("Input update password:>");
     scanf("%s", password);
@@ -111,7 +117,7 @@ int update(sqlite3* db)
     scanf("%s", plugin_name);
     getchar();
 
-    sprintf(sql, "update person set password=%s where username=%s", password, username);
+    sprintf(sql, "update person set password=%s where rowid = %d", password, id);
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
         fprintf(stderr, "update username error:%s\n", errmsg);
@@ -122,7 +128,7 @@ int update(sqlite3* db)
         printf("Update username done.\n");
     }
 
-    sprintf(sql, "update person set plugin_name=%s where username=%s", plugin_name, username);
+    sprintf(sql, "update person set plugin_name=%s where rowid = %d", plugin_name, id);
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
         fprintf(stderr, "update plugin name error:%s\n", errmsg);
@@ -135,7 +141,8 @@ int update(sqlite3* db)
     return 0;
 }
 
-static int callback(void* data, int argc, char** argv, char** azColName) {
+static int callback(void* data, int argc, char** argv, char** azColName) 
+{
     int i;
     for (i = 0; i < argc; i++) 
     {
