@@ -11,6 +11,34 @@
 
 int count = 0;
 
+int exist(sqlite3 *db, char *username)
+{
+    char sql[256];
+    char* errmsg;
+    sqlite3_stmt* stmt;
+
+    sprintf(sql, "select username from person where username='%s'", username);
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, &errmsg) != SQLITE_OK) 
+    {
+        fprintf(stderr, "prepare error:%s\n", errmsg);
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) 
+    {
+        int count = sqlite3_column_int(stmt, 0);
+        sqlite3_finalize(stmt);
+        return count;
+    }
+    else 
+    {
+        fprintf(stderr, "step error:%s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+}
+
 int my_strtok(char* dest, const char* src, char delimeter)
 {
     assert(dest && src);
@@ -25,27 +53,12 @@ int my_strtok(char* dest, const char* src, char delimeter)
     return count;
 }
 
-int insert(sqlite3* db)
+int insert(sqlite3* db, char *username, char *password, char *plugin_name)
 {
-    char username[256] = { 0 };
-    char password[256] = { 0 };
-    char plugin_name[256] = { 0 };
     char* errmsg;
     char sql[256];
 
-    printf("Input username:>");
-    scanf("%s", username);
-    getchar();
-
-    printf("Input password:>");
-    scanf("%s", password);
-    getchar();
-
-    printf("Input plugin name:>");
-    scanf("%s", plugin_name);
-    getchar();
-
-    sprintf(sql, "insert into person values(%d, '%s', '%s', '%s');", count + 1, username, password, plugin_name);
+    sprintf(sql, "insert into person values('%s', '%s', '%s');", username, password, plugin_name);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
@@ -60,23 +73,26 @@ int insert(sqlite3* db)
     return 0;
 }
 
-int delete(sqlite3* db)
+int delete(sqlite3* db, char *username)
 {
-    int id = -1;
     char sql[256];
     char* errmsg;
 
-    printf("Input id:>");
-    scanf("%d", &id);
-    getchar();
-
-    if (id < 0)
+    int ret = exist(db, username);
+    if (ret < 0)
     {
-        printf("ID invalid!\n");
+        printf("username does not exist.\n");
         return 1;
     }
 
-    sprintf(sql, "delete from person where rowid = %d", id);
+    sprintf(sql, "select username from person where username='%s'", username);
+    if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
+    {
+        fprintf(stderr, "delete error:%s\n", errmsg);
+        return 1;
+    }
+
+    sprintf(sql, "delete from person where username ='%s'", username);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
@@ -91,53 +107,47 @@ int delete(sqlite3* db)
     return 0;
 }
 
-int update(sqlite3* db)
-{
-    int id = -1;
-    char password[256] = { 0 };
-    char plugin_name[256] = { 0 };
+int update(sqlite3* db, char *username, char *newPassword, char *newPlugin_name)
+{   
     char* errmsg;
     char sql[256];
 
-    printf("Input id:>");
-    scanf("%d", &id);
-    getchar();
-
-    if (id < 0)
+    int ret = exist(db, username);
+    if (ret < 0)
     {
-        printf("ID invalid!\n");
+        printf("username does not exist.\n");
         return 1;
     }
 
-    printf("Input update password:>");
-    scanf("%s", password);
-    getchar();
+    if (newPassword != NULL)
+    {
+        sprintf(sql, "update person set password='%s' where username='%s'", newPassword, username);
+        if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
+        {
+            fprintf(stderr, "update password error:%s\n", errmsg);
+            return 1;
+        }
+        else
+        {
+            printf("Update password done.\n");
+        }
 
-    printf("Input update plugin name:>");
-    scanf("%s", plugin_name);
-    getchar();
-
-    sprintf(sql, "update person set password=%s where rowid = %d", password, id);
-    if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
-    {
-        fprintf(stderr, "update username error:%s\n", errmsg);
-        return 1;
     }
-    else
+    
+    if (newPlugin_name != NULL)
     {
-        printf("Update username done.\n");
+        sprintf(sql, "update person set plugin_name='%s' where username='%s'", newPlugin_name, username);
+        if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
+        {
+            fprintf(stderr, "update plugin name error:%s\n", errmsg);
+            return 1;
+        }
+        else
+        {
+            printf("Update plugin name done.\n");
+        }
     }
-
-    sprintf(sql, "update person set plugin_name=%s where rowid = %d", plugin_name, id);
-    if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
-    {
-        fprintf(stderr, "update plugin name error:%s\n", errmsg);
-        return 1;
-    }
-    else
-    {
-        printf("Update plugin name done.\n");
-    }
+    
     return 0;
 }
 
@@ -259,7 +269,7 @@ int main()
         printf("Opened database successfully.\n");
     }
 
-    if (sqlite3_exec(db, "create table if not exists person(ID Integer, username char, password char, plugin_name char)", NULL, NULL, &errMsg) != SQLITE_OK)
+    if (sqlite3_exec(db, "create table if not exists person(username char, password char, plugin_name char)", NULL, NULL, &errMsg) != SQLITE_OK)
     {
         fprintf(stderr, "create table error:%s\n", sqlite3_errmsg(db));
         return 1;
@@ -268,12 +278,6 @@ int main()
     {
         printf("create or open table success.\n");
     }
-
-    sqlite3_stmt* stmt;
-    sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM person", -1, &stmt, NULL);
-    sqlite3_step(stmt);
-    count = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
     
     while (1)
     {
@@ -289,17 +293,47 @@ int main()
         switch (cmd)
         {
         case 1:
-            insert(db);
+        {
+            char username[256] = { 0 };
+            char password[256] = { 0 };
+            char plugin_name[256] = { 0 };
+            printf("Input username:>");
+            scanf("%s", username);
+            printf("Input password:>");
+            scanf("%s", password);
+            printf("Input plugin_name:>");
+            scanf("%s", plugin_name);
+
+            insert(db, username, password, plugin_name);
             break;
+        }
         case 2:
-            delete(db);
+        {
+            char username[256] = { 0 };
+            printf("Input username:>");
+            scanf("%s", username);
+            delete(db, username);
             break;
+        }
         case 3:
+        {
             query(db);
             break;
+        }
         case 4:
-            update(db);
+        {
+            char username[256] = { 0 };
+            char password[256] = { 0 };
+            char plugin_name[256] = { 0 };
+            printf("Input username:>");
+            scanf("%s", username);
+            printf("Input password:>");
+            scanf("%s", password);
+            printf("Input plugin_name:>");
+            scanf("%s", plugin_name);
+            update(db, username, password, plugin_name);
             break;
+        }
         case 5:
             sqlite3_close(db);
             exit(0);
