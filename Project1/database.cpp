@@ -1,11 +1,36 @@
+#define  _CRT_SECURE_NO_WARNINGS 1
 #include "database.h"
 
-int count = 0;
+int init_db(sqlite3 *db, int rc)
+{
+    char* errMsg = 0;
+
+    if (rc)
+    {
+        fprintf(stderr, "Can't open database:%s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+    else
+    {
+        printf("Opened database successfully.\n");
+    }
+
+    if (sqlite3_exec(db, "create table if not exists person(username TEXT, password TEXT, plugin_name TEXT, uuid TEXT)", NULL, NULL, &errMsg) != SQLITE_OK)
+    {
+        fprintf(stderr, "create table error:%s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+    else
+    {
+        printf("create or open table success.\n");
+        return 0;
+    }
+}
 
 int exist(sqlite3* db, unsigned char* username)
 {
     char sql[256];
-    char* errmsg;
+    const char* errmsg;
     sqlite3_stmt* stmt;
 
     sprintf(sql, "select username from person where username='%s'", username);
@@ -44,12 +69,12 @@ int my_strtok(unsigned char* dest, const unsigned char* src, char delimeter)
     return count;
 }
 
-int insert(sqlite3* db, unsigned char* username, unsigned char* password, unsigned char* plugin_name)
+int insert(sqlite3* db, unsigned char* username, unsigned char* password, unsigned char* plugin_name, unsigned char* uuid)
 {
     char* errmsg;
     char sql[256];
 
-    sprintf(sql, "insert into person values('%s', '%s', '%s');", username, password, plugin_name);
+    sprintf(sql, "insert into person values('%s', '%s', '%s', '%s');", username, password, plugin_name, uuid);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
     {
@@ -59,7 +84,6 @@ int insert(sqlite3* db, unsigned char* username, unsigned char* password, unsign
     else
     {
         printf("Insert done.\n");
-        count++;
     }
     return 0;
 }
@@ -76,13 +100,6 @@ int Delete(sqlite3* db, unsigned char* username)
         return 1;
     }
 
-    sprintf(sql, "select username from person where username='%s'", username);
-    if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
-    {
-        fprintf(stderr, "delete error:%s\n", errmsg);
-        return 1;
-    }
-
     sprintf(sql, "delete from person where username ='%s'", username);
 
     if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
@@ -93,12 +110,11 @@ int Delete(sqlite3* db, unsigned char* username)
     else
     {
         printf("Delete done.\n");
-        count--;
     }
     return 0;
 }
 
-int update(sqlite3* db, unsigned char* username, unsigned char* newPassword, unsigned char* newPlugin_name)
+int update(sqlite3* db, unsigned char* username, unsigned char* newPassword, unsigned char* newPlugin_name, unsigned char* newUuid)
 {
     char* errmsg;
     char sql[256];
@@ -136,6 +152,20 @@ int update(sqlite3* db, unsigned char* username, unsigned char* newPassword, uns
         else
         {
             printf("Update plugin name done.\n");
+        }
+    }
+
+    if (newUuid != NULL)
+    {
+        sprintf(sql, "update person set uuid='%s' where username='%s'", newUuid, username);
+        if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
+        {
+            fprintf(stderr, "update uuid error:%s\n", errmsg);
+            return 1;
+        }
+        else
+        {
+            printf("Update uuid done.\n");
         }
     }
 

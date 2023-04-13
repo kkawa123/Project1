@@ -18,9 +18,6 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="echo_server.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="database.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -30,7 +27,7 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="database.h">
-      <Filter>源文件</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

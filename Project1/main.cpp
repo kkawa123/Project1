@@ -1,63 +1,32 @@
 #define  _CRT_SECURE_NO_WARNINGS 1
 
 #include "database.h"
-#include <websocketpp/config/asio_no_tls.hpp>
-#include <websocketpp/server.hpp>
 #include <iostream>
-
-#define DEBUG 1
-
-typedef websocketpp::server<websocketpp::config::asio> server;
-
-using websocketpp::lib::placeholders::_1;
-using websocketpp::lib::placeholders::_2;
-using websocketpp::lib::bind;
 
 int main()
 {
-    unsigned char receiveBuf[256] = { 0 };
-    unsigned char sendBuf[256] = { 0 };
-
-    
+    unsigned char receiveBuf[256] = "awa\0a123456\0awaawa\0123";
 
     unsigned char username[256] = { 0 };
     unsigned char password[256] = { 0 };
     unsigned char plugin_name[256] = { 0 };
+    unsigned char uuid[32] = { 0 };
 
-    int lenU = my_strtok(username, receiveBuf, '\0');
-    int lenPw = my_strtok(password, receiveBuf + lenU + 1, '\0');
-    int lenPn = my_strtok(plugin_name, receiveBuf + lenU + lenPw + 2, '\0');
-    if (!(lenU && lenPw && lenPn))
+    int lenUn = my_strtok(username, receiveBuf, '\0');
+    int lenPw = my_strtok(password, receiveBuf + lenUn + 1, '\0');
+    int lenPn = my_strtok(plugin_name, receiveBuf + lenUn + lenPw + 2, '\0');
+    int lenUu = my_strtok(uuid, receiveBuf + lenUn + lenPw + lenPn + 3, '\0');
+
+    if (!(lenUn && lenPw && lenPn && lenUu))
     {
         printf("receive error!\n");
         return 1;
     }
 
     sqlite3* db;
-    char* errMsg = 0;
-    int rc;
+    int rc = sqlite3_open("test.db", &db);
 
-    rc = sqlite3_open("test.db", &db);
-
-    if (rc)
-    {
-        fprintf(stderr, "Can't open database:%s\n", sqlite3_errmsg(db));
-        return 1;
-    }
-    else
-    {
-        printf("Opened database successfully.\n");
-    }
-
-    if (sqlite3_exec(db, "create table if not exists person(username char, password char, plugin_name char)", NULL, NULL, &errMsg) != SQLITE_OK)
-    {
-        fprintf(stderr, "create table error:%s\n", sqlite3_errmsg(db));
-        return 1;
-    }
-    else
-    {
-        printf("create or open table success.\n");
-    }
+    init_db(db, rc);
     
     while (1)
     {
@@ -80,8 +49,10 @@ int main()
             scanf("%s", password);
             printf("Input plugin_name:>");
             scanf("%s", plugin_name);
+            printf("Input uuid:>");
+            scanf("%s", uuid);
 
-            insert(db, username, password, plugin_name);
+            insert(db, username, password, plugin_name, uuid);
             break;
         }
         case 2:
@@ -104,7 +75,9 @@ int main()
             scanf("%s", password);
             printf("Input plugin_name:>");
             scanf("%s", plugin_name);
-            update(db, username, password, plugin_name);
+            printf("Input uuid:>");
+            scanf("%s", uuid);
+            update(db, username, password, plugin_name, uuid);
             break;
         }
         case 5:
