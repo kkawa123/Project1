@@ -5,19 +5,18 @@
 
 int main()
 {
-    unsigned char receiveBuf[256] = "awa\0a123456\0awaawa\0123";
+    unsigned char receiveBuf[256] = "awa\0a123456\0awaawa";
 
     unsigned char username[256] = { 0 };
     unsigned char password[256] = { 0 };
     unsigned char plugin_name[256] = { 0 };
-    unsigned char uuid[32] = { 0 };
+    unsigned char uuid[16] = { 0 };
 
     int lenUn = my_strtok(username, receiveBuf, '\0');
     int lenPw = my_strtok(password, receiveBuf + lenUn + 1, '\0');
     int lenPn = my_strtok(plugin_name, receiveBuf + lenUn + lenPw + 2, '\0');
-    int lenUu = my_strtok(uuid, receiveBuf + lenUn + lenPw + lenPn + 3, '\0');
 
-    if (!(lenUn && lenPw && lenPn && lenUu))
+    if (!(lenUn && lenPw && lenPn))
     {
         printf("receive error!\n");
         return 1;
@@ -32,7 +31,7 @@ int main()
     {
         printf("Input cmd;\n");
         printf("**********************\n");
-        printf("1:insert  2:delete  3:query  4:updata  5:quit\n");
+        printf("1:insert  2:delete  3:query  4:updata  5:judge  6:quit\n");
         printf("**********************\n");
 
         int cmd = 0;
@@ -75,12 +74,21 @@ int main()
             scanf("%s", password);
             printf("Input plugin_name:>");
             scanf("%s", plugin_name);
-            printf("Input uuid:>");
-            scanf("%s", uuid);
-            update(db, username, password, plugin_name, uuid);
+      
+            update(db, username, password, plugin_name);
             break;
         }
         case 5:
+        {
+            printf("Input username:>");
+            scanf("%s", username);
+            printf("Input plugin_name:>");
+            scanf("%s", plugin_name);
+
+            exist(db, username, plugin_name);
+            break;
+        }
+        case 6:
             sqlite3_close(db);
             exit(0);
 

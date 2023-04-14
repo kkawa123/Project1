@@ -27,11 +27,50 @@ int init_db(sqlite3 *db, int rc)
     }
 }
 
-int exist(sqlite3* db, unsigned char* username)
+static bool cmpstr(const unsigned char* str1, unsigned char* str2)
+{
+    bool flag = false;
+    assert(str1 && str2);
+    while (*str1)
+    {
+        const unsigned char* tmp1 = str1;
+        unsigned char* tmp2 = str2;
+        while (true)
+        {
+            if ((*str1 == ',' || *str1 == '\0') && *str2 == '\0')
+            {
+                flag = true;
+                break;
+            }
+            if (*str1 == *str2)
+            {
+                str1++;
+                str2++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        if (flag)
+        {
+            return true;
+        }
+        else
+        {
+            str1 = ++tmp1;
+            str2 = tmp2;
+        }
+    }
+    return false;
+}
+
+int exist(sqlite3* db, unsigned char* username, unsigned char* plugin_name)
 {
     char sql[256];
     const char* errmsg;
     sqlite3_stmt* stmt;
+    int count = -1;
 
     sprintf(sql, "select username from person where username='%s'", username);
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, &errmsg) != SQLITE_OK)
@@ -43,16 +82,56 @@ int exist(sqlite3* db, unsigned char* username)
 
     if (sqlite3_step(stmt) == SQLITE_ROW)
     {
-        int count = sqlite3_column_int(stmt, 0);
+        count = sqlite3_column_int(stmt, 0);
         sqlite3_finalize(stmt);
-        return count;
     }
     else
     {
         fprintf(stderr, "step error:%s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
+        if (plugin_name != NULL)
+        {
+            printf("username does not exist.\n");
+        }
         return -1;
     }
+
+    if (plugin_name != NULL)
+    {
+        sqlite3_stmt* stmt;
+        sprintf(sql, "select plugin_name from person where username='%s'", username);
+        if (sqlite3_prepare_v2(db, sql, strlen(sql), &stmt, &errmsg) != SQLITE_OK)
+        {
+            printf("prepare error: %s\n", sqlite3_errmsg(db));
+            return -1;
+        }
+
+        if (sqlite3_step(stmt) == SQLITE_ROW) 
+        {
+            const unsigned char* allPlugin = sqlite3_column_text(stmt, 0);
+            bool flag = cmpstr(allPlugin, plugin_name);
+            if (flag)
+            {
+                printf("Plugin exists.\n");
+                sqlite3_finalize(stmt);
+                return count;
+            }
+            else
+            {
+                printf("Plugin does not exist.\n");
+                sqlite3_finalize(stmt);
+                return -1;
+            }
+        }
+        else
+        {
+            fprintf(stderr, "step error:%s\n", sqlite3_errmsg(db));
+            sqlite3_finalize(stmt);
+            return -1;
+        }
+    }
+
+    return count;
 }
 
 int my_strtok(unsigned char* dest, const unsigned char* src, char delimeter)
@@ -93,7 +172,7 @@ int Delete(sqlite3* db, unsigned char* username)
     char sql[256];
     char* errmsg;
 
-    int ret = exist(db, username);
+    int ret = exist(db, username, NULL);
     if (ret < 0)
     {
         printf("username does not exist.\n");
@@ -114,12 +193,12 @@ int Delete(sqlite3* db, unsigned char* username)
     return 0;
 }
 
-int update(sqlite3* db, unsigned char* username, unsigned char* newPassword, unsigned char* newPlugin_name, unsigned char* newUuid)
+int update(sqlite3* db, unsigned char* username, unsigned char* newPassword, unsigned char *newPlugin_name)
 {
     char* errmsg;
     char sql[256];
 
-    int ret = exist(db, username);
+    int ret = exist(db, username, NULL);
     if (ret < 0)
     {
         printf("username does not exist.\n");
@@ -152,20 +231,6 @@ int update(sqlite3* db, unsigned char* username, unsigned char* newPassword, uns
         else
         {
             printf("Update plugin name done.\n");
-        }
-    }
-
-    if (newUuid != NULL)
-    {
-        sprintf(sql, "update person set uuid='%s' where username='%s'", newUuid, username);
-        if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
-        {
-            fprintf(stderr, "update uuid error:%s\n", errmsg);
-            return 1;
-        }
-        else
-        {
-            printf("Update uuid done.\n");
         }
     }
 
