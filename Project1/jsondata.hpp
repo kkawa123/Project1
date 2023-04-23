@@ -38,10 +38,10 @@ public:
 		rapidjson::Document dom;
 		if (!dom.Parse(jsonContent.c_str()).HasParseError()) {
 			try {
-				for (auto& m : dom.GetObject()) {
+				for (auto& m : dom.GetObj()) {
 					auto d = std::make_shared<UserData>();
 					d->username = std::string(m.name.GetString());
-					auto o = m.value.GetObject();
+					auto o = m.value.GetObj();
 					d->uuid = std::string(o["uuid"].GetString());
 					d->psw = std::string(o["psw"].GetString());
 					d->ip = std::string(o["ip"].GetString());
@@ -67,9 +67,9 @@ public:
 		auto& allocator = dom.GetAllocator();
 		for (auto& p : data) {
 			rapidjson::Value usr(rapidjson::kObjectType);
-			usr.AddMember("uuid", p.second->uuid, allocator);
-			usr.AddMember("ip", p.second->ip, allocator);
-			usr.AddMember("psw", p.second->psw, allocator);
+			usr.AddMember("uuid", rapidjson::StringRef(p.second->uuid.c_str()), allocator);
+			usr.AddMember("ip", rapidjson::StringRef(p.second->ip.c_str()), allocator);
+			usr.AddMember("psw", rapidjson::StringRef(p.second->psw.c_str()), allocator);
 			rapidjson::Value plugins(rapidjson::kArrayType);
 			for (auto& plugin : p.second->plugins) {
 				plugins.PushBack(rapidjson::StringRef(plugin.c_str()), allocator);

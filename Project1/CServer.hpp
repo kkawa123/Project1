@@ -5,7 +5,11 @@
 #include "protocol.h"
 #include "jsondata.hpp"
 
+#include <unordered_map>
 #include <iostream>
+#include <functional>
+
+
 
 typedef websocketpp::server<websocketpp::config::asio> server;
 
@@ -22,7 +26,7 @@ typedef server::message_ptr message_ptr;
 class CServer {
 public:
 	
-	server m_endpoint;
+	static server m_endpoint;
 	shared_ptr<JsonData> JsonData;
 
 	CServer() {
@@ -38,6 +42,7 @@ public:
 	void listen(uint16_t port) {
 		m_endpoint.listen(port);
 		m_endpoint.start_accept();
+		m_endpoint.run();
 	}
 
 	struct Task {
@@ -74,8 +79,20 @@ public:
 		return !r;
 	}
 
-    std::map<websocketpp::connection_hdl, std::shared_ptr<protocol>> isHead;
+	struct equal_hdl {
+		bool operator()(const websocketpp::connection_hdl& h1, const websocketpp::connection_hdl& h) const {
+			return h.lock().get() == h1.lock().get();
+		}
+	};
 
+
+	struct hdl_hash {
+		size_t operator()(const websocketpp::connection_hdl& h) const{
+			return hash<unsigned long long>()((unsigned long long)h.lock().get());
+		}
+	};
+
+	std::unordered_map<websocketpp::connection_hdl, std::shared_ptr<protocol>, hdl_hash, equal_hdl> isHead;
 	void on_open(websocketpp::connection_hdl hdl) {
 		auto prot = make_shared<protocol>();
 		isHead.emplace(hdl, prot);
@@ -127,4 +144,6 @@ public:
 		}
     }
 };
+
+server CServer::m_endpoint;
 

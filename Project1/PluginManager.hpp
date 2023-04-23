@@ -3,7 +3,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
-
+#pragma comment(lib,"zlib.lib")
+#pragma comment(lib,"minizip.lib")
 
 class PluginManager {
 	
@@ -15,14 +16,14 @@ public:
         if (!uf)
         {
             std::cerr << "Error: Failed to open zip file." << std::endl;
-            return;
+            return NULL;
         }
 
         if (unzGoToFirstFile(uf) != UNZ_OK)
         {
             std::cerr << "Error: Failed to go to first file in zip archive." << std::endl;
             unzClose(uf);
-            return;
+            return NULL;
         }
 
         auto files = std::make_unique<std::vector<std::string>>();
@@ -35,7 +36,7 @@ public:
             {
                 std::cerr << "Error: Failed to get current file info in zip archive." << std::endl;
                 unzClose(uf);
-                return;
+                return NULL;
             }
             std::string buffer(file_info.uncompressed_size, '\0');
             if (std::strstr(filename_inzip, ".class")) {
@@ -44,7 +45,7 @@ public:
                     std::cerr << "Error: Failed to read file from zip archive." << std::endl;
                     unzCloseCurrentFile(uf);
                     unzClose(uf);
-                    return;
+                    return NULL;
                 }
             }
             files->push_back(buffer);
