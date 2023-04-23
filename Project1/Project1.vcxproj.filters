@@ -21,12 +21,27 @@
     <ClCompile Include="database.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="protocol.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="sqlite3.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="database.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CServer.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="jsondata.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginManager.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
